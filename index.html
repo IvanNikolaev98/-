@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Таинственная дверь</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    height: 100vh;
+    overflow: hidden;
+    background: radial-gradient(ellipse at center, #2a3d66 0%, #0d1326 100%);
+    font-family: 'Comic Sans MS', 'Trebuchet MS', sans-serif;
+    cursor: default;
+    user-select: none;
+  }
+
+  .title {
+    position: absolute;
+    top: 20px;
+    width: 100%;
+    text-align: center;
+    color: #ffd86b;
+    font-size: 32px;
+    text-shadow: 0 0 12px #ffb347, 0 2px 4px #000;
+    letter-spacing: 2px;
+    z-index: 10;
+  }
+
+  .hint {
+    position: absolute;
+    bottom: 20px;
+    width: 100%;
+    text-align: center;
+    color: #b8c7e6;
+    font-size: 16px;
+    opacity: 0.8;
+    z-index: 10;
+  }
+
+  /* Комната — пол и стена */
+  .room {
+    position: absolute;
+    inset: 0;
+  }
+
+  /* Дверь — уменьшенный размер */
+  .door {
+    position: absolute;
+    left: 50%;
+    top: 55%;
+    transform: translate(-50%, -50%);
+    width: 180px;
+    height: 300px;
+    background: linear-gradient(180deg, #6b3a1f 0%, #4a2612 100%);
+    border: 6px solid #2e1708;
+    border-radius: 8px 8px 4px 4px;
+    box-shadow:
+      inset 0 0 30px rgba(0,0,0,0.5),
+      0 0 40px rgba(0,0,0,0.7),
+      0 0 80px rgba(255, 180, 80, 0.15);
+    transform-style: preserve-3d;
+    transform-origin: left center;
+    transition: transform 1.2s ease;
+    cursor: pointer;
+  }
+
+  .door.open {
+    transform: translate(-50%, -50%) perspective(1000px) rotateY(-75deg);
+  }
+
+  /* Панели на двери */
+  .door::before,
+  .door::after {
+    content: '';
+    position: absolute;
+    left: 20px;
+    right: 20px;
+    height: 90px;
+    border: 3px solid #2e1708;
+    border-radius: 4px;
+    background: linear-gradient(180deg, rgba(0,0,0,0.15), rgba(0,0,0,0.3));
+  }
+  .door::before { top: 30px; }
+  .door::after  { top: 160px; }
+
+  /* Ручка двери */
+  .handle {
+    position: absolute;
+    right: 18px;
+    top: 50%;
+    width: 14px;
+    height: 14px;
+    background: radial-gradient(circle at 30% 30%, #ffe28a, #b8860b 70%, #6b4e0a);
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(255,200,80,0.6), inset 0 0 3px #000;
+  }
+
+  /* Замочная скважина */
+  .keyhole {
+    position: absolute;
+    right: 20px;
+    top: calc(50% + 22px);
+    width: 8px;
+    height: 14px;
+    background: #000;
+    border-radius: 50% 50% 2px 2px;
+    box-shadow: inset 0 0 3px #000;
+  }
+
+  /* Секретная зона — нижний левый угол двери */
+  .secret {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 50px;
+    height: 50px;
+    cursor: pointer;
+  }
+
+  /* Ключ, следующий за курсором */
+  .key {
+    position: fixed;
+    top: 0;
+    left: 0;
+    font-size: 36px;
+    pointer-events: none;
+    transform: translate(18px, 18px) rotate(-20deg);
+    filter: drop-shadow(0 0 6px #ffd86b);
+    display: none;
+    z-index: 1000;
+  }
+
+  .key.visible { display: block; }
+
+  /* Сообщение */
+  .message {
+    position: absolute;
+    top: 110px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 18px 30px;
+    background: rgba(20, 25, 50, 0.92);
+    color: #ffd86b;
+    font-size: 22px;
+    border: 2px solid #ffd86b;
+    border-radius: 14px;
+    box-shadow: 0 0 25px rgba(255, 216, 107, 0.5);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+    text-align: center;
+    max-width: 80%;
+    z-index: 10;
+  }
+
+  .message.show { opacity: 1; }
+
+  /* Свечение за дверью, когда она открыта */
+  .glow {
+    position: absolute;
+    left: 50%;
+    top: 55%;
+    transform: translate(-50%, -50%);
+    width: 170px;
+    height: 290px;
+    background: radial-gradient(ellipse, #fff3b0 0%, #ffb347 40%, transparent 75%);
+    opacity: 0;
+    transition: opacity 1s ease;
+    z-index: -1;
+  }
+
+  .glow.on { opacity: 1; }
+
+  /* Кнопка "Начать заново" — правее и меньше */
+  .restart-btn {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    padding: 8px 14px;
+    background: rgba(30, 35, 60, 0.6);
+    color: #6a7a9a;
+    font-size: 14px;
+    font-family: inherit;
+    border: 2px solid #4a5a7a;
+    border-radius: 10px;
+    cursor: not-allowed;
+    opacity: 0.4;
+    transition: all 0.4s ease;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .restart-btn.active {
+    background: rgba(255, 216, 107, 0.15);
+    color: #ffd86b;
+    border-color: #ffd86b;
+    opacity: 1;
+    cursor: pointer;
+    pointer-events: auto;
+    box-shadow: 0 0 20px rgba(255, 216, 107, 0.4), 0 0 40px rgba(255, 216, 107, 0.2);
+    animation: pulse 2s infinite ease-in-out;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(255, 216, 107, 0.4), 0 0 40px rgba(255, 216, 107, 0.2); }
+    50%      { box-shadow: 0 0 30px rgba(255, 216, 107, 0.7), 0 0 60px rgba(255, 216, 107, 0.35); }
+  }
+
+  /* Звёздочки на фоне для атмосферы */
+  .star {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    background: #fff;
+    border-radius: 50%;
+    opacity: 0.7;
+    animation: twinkle 3s infinite ease-in-out;
+  }
+
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.2; }
+    50%      { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+
+<div class="title">🚪 Таинственная дверь 🔑</div>
+<div class="hint">Найди ключ и открой дверь</div>
+
+<div class="room">
+  <div class="glow" id="glow"></div>
+  <div class="door" id="door">
+    <div class="handle"></div>
+    <div class="keyhole"></div>
+    <div class="secret" id="secret"></div>
+  </div>
+</div>
+
+<div class="key" id="key">🔑</div>
+<div class="message" id="message"></div>
+<button class="restart-btn" id="restartBtn">🔄 Начать заново</button>
+
+<script>
+  // Состояние проекта
+  let hasKey = false;
+  let doorOpen = false;
+
+  // Элементы
+  const door        = document.getElementById('door');
+  const secret      = document.getElementById('secret');
+  const keyEl       = document.getElementById('key');
+  const msgEl       = document.getElementById('message');
+  const glow        = document.getElementById('glow');
+  const restartBtn  = document.getElementById('restartBtn');
+
+  // Создаём звёздочки на фоне
+  for (let i = 0; i < 40; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    s.style.left = Math.random() * 100 + '%';
+    s.style.top  = Math.random() * 100 + '%';
+    s.style.animationDelay = (Math.random() * 3) + 's';
+    document.body.appendChild(s);
+  }
+
+  // Показать сообщение на 2.5 секунды
+  let msgTimer = null;
+  function showMessage(text) {
+    msgEl.textContent = text;
+    msgEl.classList.add('show');
+    clearTimeout(msgTimer);
+    msgTimer = setTimeout(() => {
+      msgEl.classList.remove('show');
+    }, 2500);
+  }
+
+  // Клик по секретной зоне (нижний левый угол двери)
+  secret.addEventListener('click', function(e) {
+    e.stopPropagation(); // чтобы не сработал клик по двери
+    if (hasKey) return;  // ключ уже найден
+    hasKey = true;
+    keyEl.classList.add('visible');
+    showMessage('Ты нашёл ключ! Теперь открой дверь.');
+  });
+
+  // Клик по двери (не по секретной зоне)
+  door.addEventListener('click', function(e) {
+    if (doorOpen) return; // уже открыта
+
+    if (!hasKey) {
+      // Правило 1: нет ключа
+      showMessage('Для открытия двери нужен ключ, найди его');
+    } else {
+      // Правило 2: есть ключ — открываем дверь
+      doorOpen = true;
+      door.classList.add('open');
+      glow.classList.add('on');
+      showMessage('А ты хорош 👍');
+      // Активируем кнопку "Начать заново"
+      restartBtn.classList.add('active');
+    }
+  });
+
+  // Кнопка "Начать заново"
+  restartBtn.addEventListener('click', function() {
+    if (!restartBtn.classList.contains('active')) return;
+    location.reload();
+  });
+
+  // Ключ следует за курсором
+  document.addEventListener('mousemove', function(e) {
+    if (hasKey) {
+      keyEl.style.left = e.clientX + 'px';
+      keyEl.style.top  = e.clientY + 'px';
+    }
+  });
+
+  // Клик вне двери и секретной зоны — ничего не происходит
+  // (обработчики навешаны только на нужные элементы, document не реагирует)
+</script>
+
+</body>
+</html>
